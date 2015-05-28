@@ -9,6 +9,8 @@
 
 #define PACKET_SIZE 1000
 
+// 今度デートしようね♥
+
 int main(int argc, char *argv[])
 {
 	if(argc < 2) {
