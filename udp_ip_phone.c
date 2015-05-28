@@ -9,7 +9,8 @@
 
 #define PACKET_SIZE 1000
 
-
+int client_connect(char *str_addr, int port, struct sockaddr_in *addr, int *addrlen);
+int server_connect(int port, struct sockaddr_in *addr, int *addrlen);
 
 int main(int argc, char *argv[])
 {
@@ -21,53 +22,15 @@ int main(int argc, char *argv[])
 	int addrlen;
 	int s;
 	struct sockaddr_in addr;
-	if(argc == 2) {
-		// Server mode
-		printf("Server Mode\n");
 
-		struct sockaddr_in tmp_addr;
-
-		s = socket(PF_INET, SOCK_DGRAM, 0);
-
-		tmp_addr.sin_family = AF_INET;
-		tmp_addr.sin_port = htons(atoi(argv[1]));
-		tmp_addr.sin_addr.s_addr = INADDR_ANY;
-		
-		if(bind(s, (struct sockaddr *)&tmp_addr, sizeof(tmp_addr)) < 0) {
-			perror("bind failed\n");
-			exit(1);
-		}
-
-		printf("Binded Port: %d\n", s);
-
-		int data = 0;
-
-		while(data != 2) {
-			recvfrom(s, &data, 1, 0, (struct sockaddr *)&addr, &addrlen);
-		}
-
-		data = 3;
-		sendto(s, &data, 1, 0, (struct sockaddr *)&addr, addrlen);
-	} else if(argc == 3) {
-		// Client mode
-		printf("Client Mode\n");
-		s = socket(PF_INET, SOCK_DGRAM, 0);
-
-		addr.sin_family = AF_INET;
-		if(inet_aton(argv[2], &addr.sin_addr) == 0) {
-			perror("inet_aton\n");
-			exit(1);
-		}
-		addr.sin_port = htons(atoi(argv[1]));
-
-		addrlen = sizeof(addr);
-
-		unsigned int pk = 2;
-		sendto(s, &pk, 1, 0, (struct sockaddr *)&addr, addrlen);
-
-		while(pk != 3) {
-			read(s, &pk, 1);
-		}
+	if(argc == 3) {
+	  // Client mode
+	  printf("Client Mode\n");
+	  client_connect(argv[2], atoi(argv[1]), &addr, &addrlen);
+	} else if(argc == 2) {
+	  // Server mode
+	  printf("Server Mode\n");
+	  server_connect(atoi(argv[1]), &addr, &addrlen);
 	}
 	printf("connection established.\n");
 
@@ -112,4 +75,57 @@ int main(int argc, char *argv[])
 //	shutdown(ss, SHUT_WR);
 
 	return 0;
+}
+
+int server_connect(int port, struct sockaddr_in *addr, int *addrlen)
+{
+    struct sockaddr_in tmp_addr;
+
+    int s = socket(PF_INET, SOCK_DGRAM, 0);
+
+    tmp_addr.sin_family = AF_INET;
+    tmp_addr.sin_port = htons(port);
+    tmp_addr.sin_addr.s_addr = INADDR_ANY;
+
+    if(bind(s, (struct sockaddr *)&tmp_addr, sizeof(tmp_addr)) < 0){
+        perror("bind failed\n");
+	exit(1);
+    }
+    printf("Binded Port: %d\n", s);
+
+    int data = 0;
+
+    while(data != 2) {
+        recvfrom(s, &data, 1, 0, (struct sockaddr *)addr, addrlen);
+    }
+
+    data = 3;
+    sendto(s, &data, 1, 0, (struct sockaddr *)addr, *addrlen);
+
+    return s;
+}
+
+int client_connect(char *str_addr, int port, struct sockaddr_in *addr, int *addrlen)
+{
+    // Client mode
+    printf("Client Mode\n");
+    int s = socket(PF_INET, SOCK_DGRAM, 0);
+
+    addr->sin_family = AF_INET;
+    if(inet_aton(str_addr, &addr->sin_addr) == 0) {
+    perror("inet_aton\n");
+    exit(1);
+    }
+    addr->sin_port = htons(port);
+
+    *addrlen = sizeof(*addr);
+
+    unsigned int pk = 2;
+    sendto(s, &pk, 1, 0, (struct sockaddr *)addr, *addrlen);
+
+    while(pk != 3) {
+    read(s, &pk, 1);
+    }
+
+    return s;
 }
