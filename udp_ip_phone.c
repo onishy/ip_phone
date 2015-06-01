@@ -3,11 +3,13 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <sox.h>
+#include <stdint.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
 
-#define PACKET_SIZE 1000
+#define PACKET_SIZE 48000 * 2 * 5
 
 int client_connect(char *str_addr, int port, struct sockaddr_in *addr, int *addrlen);
 int server_connect(int port, struct sockaddr_in *addr, int *addrlen);
@@ -34,21 +36,13 @@ int main(int argc, char *argv[])
 	}
 	printf("connection established.\n");
 
-	FILE *snd_in;
-	FILE *snd_out;
-	if((snd_in = popen("rec -t raw -b 16 -c 1 -e s -r 44100 -", "r")) == NULL) {
-		fprintf(stderr, "could not open rec\n");
-		exit(1);
-	}
-	if((snd_out = popen("play -t raw -b 16 -c 1 -e s -r 44100 -", "w")) == NULL) {
-		fprintf(stderr, "could not open play\n");
-		exit(1);
-	}
+	sox_format_t *ft = sox_open_read("default", 0, 0, "pulseaudio");
+	sox_init();
 
 	int n;
-	unsigned char data[PACKET_SIZE];
+	int32_t data[PACKET_SIZE];
 	while(1) {
-		n = fread(data, 1, PACKET_SIZE, snd_in);
+		n = sox_read(ft, data, PACKET_SIZE);
 		printf("writing %d bytes\n", n);
 		if(n > 0) {
 			sendto(s, data, n, 0, (struct sockaddr *)&addr, addrlen);
@@ -58,15 +52,14 @@ int main(int argc, char *argv[])
 		n = recvfrom(s, data, PACKET_SIZE, 0, (struct sockaddr *)&addr, &addrlen);
 		printf("received %d bytes\n", n);
 		if(n > 0) {
-			fwrite(data, 1, n, snd_out);
+			sox_write(ft, data, n);
 		}
 		else break;
 	}
 	printf("done.\n");
 
-	pclose(snd_in);
-	pclose(snd_out);
-
+	sox_close(ft);
+	sox_quit();
 	// close(snd_in);
 	// close(snd_out);
 
