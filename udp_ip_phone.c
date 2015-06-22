@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -9,13 +10,14 @@
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
 
-#define PACKET_SIZE 48000 * 2 * 5
+#define PACKET_SIZE 48000 * 2 * 3
 
 int client_connect(char *str_addr, int port, struct sockaddr_in *addr, int *addrlen);
 int server_connect(int port, struct sockaddr_in *addr, int *addrlen);
 
 int main(int argc, char *argv[])
 {
+	printf("Welcome.\n");
 	if(argc < 2) {
 		printf("Error: too few arguments.\n");
 		exit(1);
@@ -86,10 +88,13 @@ int server_connect(int port, struct sockaddr_in *addr, int *addrlen)
     }
     printf("Binded Port: %d\n", s);
 
-    int data = 0;
+    unsigned char data = 0;
 
     while(data != 2) {
         recvfrom(s, &data, 1, 0, (struct sockaddr *)addr, addrlen);
+        printf("%d\n", data);
+        sleep(1);
+        printf("wait.\n");
     }
 
     data = 3;
@@ -101,7 +106,6 @@ int server_connect(int port, struct sockaddr_in *addr, int *addrlen)
 int client_connect(char *str_addr, int port, struct sockaddr_in *addr, int *addrlen)
 {
     // Client mode
-    printf("Client Mode\n");
     int s = socket(PF_INET, SOCK_DGRAM, 0);
 
     addr->sin_family = AF_INET;
@@ -111,13 +115,14 @@ int client_connect(char *str_addr, int port, struct sockaddr_in *addr, int *addr
     }
     addr->sin_port = htons(port);
 
-    *addrlen = sizeof(*addr);
+    *addrlen = sizeof(struct sockaddr_in);
 
-    unsigned int pk = 2;
+    unsigned char pk = 2;
     sendto(s, &pk, 1, 0, (struct sockaddr *)addr, *addrlen);
 
     while(pk != 3) {
-    read(s, &pk, 1);
+    	recvfrom(s, &pk, 1, 0, (struct sockaddr *)addr, addrlen);
+        printf("%d\n", pk);
     }
 
     return s;
