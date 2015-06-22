@@ -26,11 +26,11 @@ int main(int argc, char *argv[])
 	if(argc == 3) {
 	  // Client mode
 	  printf("Client Mode\n");
-	  client_connect(argv[2], atoi(argv[1]), &addr, &addrlen);
+	  s = client_connect(argv[2], atoi(argv[1]), &addr, &addrlen);
 	} else if(argc == 2) {
 	  // Server mode
 	  printf("Server Mode\n");
-	  server_connect(atoi(argv[1]), &addr, &addrlen);
+	  s = server_connect(atoi(argv[1]), &addr, &addrlen);
 	}
 	printf("connection established.\n");
 
