@@ -145,7 +145,7 @@ int pow2check(long N) {
 }
 
 int main(int argc, char ** argv) {
-  if(argc < 2) {
+  if(argc != 4) {
     printf("UNCHI!!!!!\n");
     exit(1);
   }
@@ -171,11 +171,6 @@ int main(int argc, char ** argv) {
 
   // int min_l = (int)(min_f * n);
   // int max_l = (int)(max_f * n);
-  long base = 0;
-  long min = (long)(n*100)/44100;
-  long max = (long)(n*500)/44100;
-  int j;
-
 
   sample_t * buf = calloc(sizeof(sample_t), n);
   complex double * X = calloc(sizeof(complex double), n);
@@ -191,16 +186,34 @@ int main(int argc, char ** argv) {
     fft(X, Y, n);
 
     int i;
-    const double pitch = 2.0;
-
-   
+   const double pitch = 2;
     for(i = 0; i < n/2; i++) {
 //      if(i*pitch > n/2) break;
       Z[(int)(i*pitch)] = Y[i];
-      
       Z[(int)(n-1-i*pitch)] = Y[n-1-i];
-      
 
+//      if(i > 0) {
+//        int j = 0;
+//        double slope_r = (Y[i] - Y[i-1])/pitch;
+//        double slope_i = (Y[n-1-i] - Y[n-i])/pitch;
+//        for(j = (int)((i-1)*pitch)+1; j < (int)(i*pitch); j++) {
+//          Z[j] = Z[j-1] + slope_r;
+//          Z[n-1-j] = Z[n-j] + slope_i;
+//        }
+//      }
+    }
+    // double factor = 1.001;
+    // for(i = 0; i < n/2; i++) {
+    //   if(cabsf(Y[i]) > 10) {
+    //     Z[i] = Y[i] * 5;
+    //     Z[i+n/2] = Y[i+n/2] * 5;
+    //   } else {
+    //     Z[i] = Y[i];
+    //     Z[i+n/2] = Y[i+n/2];        
+    //   }
+      // Z[(int)(i*factor)] = Y[i];
+      // Z[(int)(i*factor+n/2)] = Y[i+n/2];
+    // }
     /* IFFT -> Z */
     ifft(Z, X, n);
     /* 標本の配列に変換 */
@@ -208,6 +221,5 @@ int main(int argc, char ** argv) {
     /* 標準出力へ出力 */
     write_n(1, m, buf);
   }
-
   return 0;
 }

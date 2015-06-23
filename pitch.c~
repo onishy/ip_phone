@@ -20,8 +20,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#define SAMPLING_F 44100
-
 typedef short sample_t;
 
 void die(char * s) {
@@ -109,10 +107,7 @@ void fft(complex double * x,
   double arg = 2.0 * M_PI / n;
   complex double w = cos(arg) - 1.0j * sin(arg);
   fft_r(x, y, n, w);
-  for (i = 0; i < n; i++) {
-    y[i] /= n;
-//    printf("%ld: %f\n", i, cabs(y[i]));
-  }
+  for (i = 0; i < n; i++) y[i] /= n;
 }
 
 void ifft(complex double * y, 
@@ -121,18 +116,6 @@ void ifft(complex double * y,
   double arg = 2.0 * M_PI / n;
   complex double w = cos(arg) + 1.0j * sin(arg);
   fft_r(y, x, n, w);
-}
-
-void bpf(complex double *y, long n, long smpl_f, long min_l, long max_l) {
-  long i = 0;
-  for(i = 0; i < min_l; i++) {
-    y[i] = 0;
-    y[i + n/2] = 0;
-  }
-  for(i = max_l+1; i < n/2; i++) {
-    y[i] = 0;
-    y[i + n/2] = 0;
-  }
 }
 
 int pow2check(long N) {
@@ -144,43 +127,35 @@ int pow2check(long N) {
   return 1;
 }
 
+void bpf(complex double *y,long min, long max,long n){
+  long i;
+  for(i=0;i<(n*min)/44100;i++){
+    y[i]=0;
+    y[i+n/2]=0;
+  }
+  for(i=(n*max)/44100 + 1;i<(n/2);i++){
+    y[i]=0;
+    y[i+n/2]=0;
+  }
+
+}
+
 int main(int argc, char ** argv) {
-  if(argc < 2) {
-    printf("UNCHI!!!!!\n");
-    exit(1);
-  }
-
+  (void)argc;
   long n = atol(argv[1]);
-  if (!pow2check(n)) {
-    fprintf(stderr, "error : n (%ld) not a power of two\n", n);
-    exit(1);
-  }
-
-  double min_f = atof(argv[2]);
-  double max_f = atof(argv[3]);
-
-  double smpl_f = SAMPLING_F;
-
-  long min_l = (long)(min_f * n / (double)smpl_f);
-  long max_l = (long)(max_f * n / (double)smpl_f);
-
-  if(min_f > max_f || min_f < 0 || min_l > n/2 || max_l > n/2) {
-    printf("max or min frequency out of range\n");
-    exit(1);
-  }
-
-  // int min_l = (int)(min_f * n);
-  // int max_l = (int)(max_f * n);
+  long i;
   long base = 0;
   long min = (long)(n*100)/44100;
   long max = (long)(n*500)/44100;
   int j;
-
-
+  
+  if (!pow2check(n)) {
+    fprintf(stderr, "error : n (%ld) not a power of two\n", n);
+    exit(1);
+  }
   sample_t * buf = calloc(sizeof(sample_t), n);
   complex double * X = calloc(sizeof(complex double), n);
   complex double * Y = calloc(sizeof(complex double), n);
-  complex double * Z = calloc(sizeof(complex double), n);
   while (1) {
     /* 標準入力からn個標本を読む */
     ssize_t m = read_n(0, n * sizeof(sample_t), buf);
@@ -189,25 +164,25 @@ int main(int argc, char ** argv) {
     sample_to_complex(buf, X, n);
     /* FFT -> Y */
     fft(X, Y, n);
+    //bpf(Y, min, max, n);
+    
+    
+    for(i=min;i<max+1;i++){
+      if(base < (long)Y[i]){
+	base = (long)i*44100/n;
+      }
+    }
 
-    int i;
-    const double pitch = 2.0;
+    
 
-   
-    for(i = 0; i < n/2; i++) {
-//      if(i*pitch > n/2) break;
-      Z[(int)(i*pitch)] = Y[i];
-      
-      Z[(int)(n-1-i*pitch)] = Y[n-1-i];
-      
 
     /* IFFT -> Z */
-    ifft(Z, X, n);
+    ifft(Y, X, n);
     /* 標本の配列に変換 */
     complex_to_sample(X, buf, n);
     /* 標準出力へ出力 */
-    write_n(1, m, buf);
+    //write_n(1, m, buf);
   }
-
+  printf("pitch = %ld Hz\n",base);
   return 0;
 }
