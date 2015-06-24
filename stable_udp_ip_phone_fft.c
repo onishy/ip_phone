@@ -10,6 +10,35 @@
 #include "fft.h"
 
 #define PACKET_SIZE 2048
+#define SPECTRUM_WIDTH 20
+#define SPECTRUM_N 5
+#define THRESHOLD_A 100
+#define MINIMUM_F 100
+#define MAXIMUM_F 500
+
+typedef struct {
+	int base_freq;
+	complex double data[SPECTRUM_WIDTH * SPECTRUM_N];
+} voice_data_t;
+
+int find_base_freq(complex double *data, int n, int min_f, int max_f, double threshold)
+{
+	int max = (max_f < n) ? max_f : n;
+	int i;
+	int current_max_a = 0;
+	int current_max_f = 0;
+	if(min_f >= n) return -1;
+    for(i = min_f; i < max+1; i++){
+     	if(cabs(data[i]) > threshold) {
+     		return i * 44100 / n;
+			// current_max_f = i * 44100 / n;
+			// current_max_a = cabs(data[i]);
+    	}
+    }
+    return -1;
+    // return current_max_f;
+}
+
 
 int main(int argc, char *argv[])
 {
@@ -103,6 +132,9 @@ int main(int argc, char *argv[])
 	    /* FFT -> Y */
 	    fft(X, Y, PACKET_SIZE);
 
+	    int base = find_base_freq(Y, PACKET_SIZE, (PACKET_SIZE*MINIMUM_F)/44100, (PACKET_SIZE*MAXIMUM_F)/44100, THRESHOLD_A);
+	    fprintf(stderr, "base = %d\n", base);
+
 		printf("writing %d bytes\n", n);
 		if(n > 0) {
 			sendto(s, (unsigned char*)Y, PACKET_SIZE * sizeof(complex double), 0, (struct sockaddr *)&addr, addrlen);
@@ -111,9 +143,9 @@ int main(int argc, char *argv[])
 		//else break;
 
 		n = recvfrom(s, (unsigned char*)Y, PACKET_SIZE * sizeof(complex double), 0, (struct sockaddr *)&addr, &addrlen);
+		printf("received %d bytes\n", n);
 		n /= sizeof(complex double);
 		fwrite(Y, 1, PACKET_SIZE * sizeof(complex double), recv_fp);
-		printf("received %d bytes\n", n);
 		if(n > 0) {
 			ifft(Y, X, PACKET_SIZE);
 			complex_to_sample(X, data, PACKET_SIZE);
