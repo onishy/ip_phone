@@ -93,14 +93,14 @@ int main(int argc, char *argv[])
 		if(n > 0) {
 			sendto(s, data, n, 0, (struct sockaddr *)&addr, addrlen);
 		}
-		else break;
+		//else break;
 
 		n = recvfrom(s, data, PACKET_SIZE, 0, (struct sockaddr *)&addr, &addrlen);
 		printf("received %d bytes\n", n);
 		if(n > 0) {
 			fwrite(data, 1, n, snd_out);
 		}
-		else break;
+		//else break;
 	}
 	printf("done.\n");
 
