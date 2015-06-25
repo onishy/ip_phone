@@ -9,7 +9,7 @@
 #include <unistd.h>
 #include "fft.h"
 
-#define PACKET_SIZE 1024
+#define PACKET_SIZE 512
 #define SPECTRUM_WIDTH 1
 #define SPECTRUM_N 4
 #define THRESHOLD_A 20
