@@ -9,11 +9,11 @@
 #include <unistd.h>
 #include "fft.h"
 
-#define PACKET_SIZE 1024
+#define PACKET_SIZE 2048
 #define SPECTRUM_WIDTH 2
-#define SPECTRUM_N 8
+#define SPECTRUM_N 10
 #define THRESHOLD_A 50
-#define MINIMUM_F 50
+#define MINIMUM_F 100
 #define MAXIMUM_F 500
 
 #define DATASIZE SPECTRUM_WIDTH * SPECTRUM_N*2 * 2
@@ -131,6 +131,9 @@ int main(int argc, char *argv[])
 	int s;
 	struct sockaddr_in addr;
 	int la_flag = atoi(argv[1]);
+	if(la_flag) {
+		printf("la flag on\n");
+	}
 	if(argc == 3) {
 		// Server mode
 		printf("Server Mode\n");
@@ -235,20 +238,20 @@ int main(int argc, char *argv[])
 		free(Y);
 
 		Y = calloc(sizeof(complex double), PACKET_SIZE);
-		n = recvfrom(s, (unsigned char*)voice, sizeof(voice_data_t), 0, (struct sockaddr *)&addr, &addrlen);
+		// n = recvfrom(s, (unsigned char*)voice, sizeof(voice_data_t), 0, (struct sockaddr *)&addr, &addrlen);
 		printf("received %d bytes\n", n);
 		fwrite(voice, 1, sizeof(voice_data_t), recv_fp);
 
 		if(n > 0) {
 			printf("received base = %d\n", voice->base_freq);
 
-			uint16_t base;
+			uint16_t voice_base;
 			if(la_flag) {
-				base = 440;
+				voice_base = 220;
 			} else {
-				base = voice->base_freq;
+				voice_base = voice->base_freq;
 			}
-			parse(voice->data, Y, DATASIZE, PACKET_SIZE, base, SPECTRUM_WIDTH);
+			parse(voice->data, Y, DATASIZE, PACKET_SIZE, voice_base, SPECTRUM_WIDTH);
 			ifft(Y, X, PACKET_SIZE);
 			complex_to_sample(X, data, PACKET_SIZE);
 			fwrite(data, 1, PACKET_SIZE * sizeof(sample_t), snd_out);
