@@ -130,7 +130,8 @@ int main(int argc, char *argv[])
 	int addrlen;
 	int s;
 	struct sockaddr_in addr;
-	if(argc == 2) {
+	int la_flag = atoi(argv[1]);
+	if(argc == 3) {
 		// Server mode
 		printf("Server Mode\n");
 
@@ -139,7 +140,7 @@ int main(int argc, char *argv[])
 		s = socket(PF_INET, SOCK_DGRAM, 0);
 
 		tmp_addr.sin_family = AF_INET;
-		tmp_addr.sin_port = htons(atoi(argv[1]));
+		tmp_addr.sin_port = htons(atoi(argv[2]));
 		tmp_addr.sin_addr.s_addr = INADDR_ANY;
 		
 		if(bind(s, (struct sockaddr *)&tmp_addr, sizeof(tmp_addr)) < 0) {
@@ -161,17 +162,17 @@ int main(int argc, char *argv[])
 		for(cnt = 0; cnt < 100; cnt++) {
 			sendto(s, &data, 1, 0, (struct sockaddr *)&addr, addrlen);
 		}
-	} else if(argc == 3) {
+	} else if(argc == 4) {
 		// Client mode
 		printf("Client Mode\n");
 		s = socket(PF_INET, SOCK_DGRAM, 0);
 
 		addr.sin_family = AF_INET;
-		if(inet_aton(argv[2], &addr.sin_addr) == 0) {
+		if(inet_aton(argv[3], &addr.sin_addr) == 0) {
 			perror("inet_aton\n");
 			exit(1);
 		}
-		addr.sin_port = htons(atoi(argv[1]));
+		addr.sin_port = htons(atoi(argv[2]));
 
 		addrlen = sizeof(addr);
 
@@ -240,7 +241,14 @@ int main(int argc, char *argv[])
 
 		if(n > 0) {
 			printf("received base = %d\n", voice->base_freq);
-			parse(voice->data, Y, DATASIZE, PACKET_SIZE, voice->base_freq, SPECTRUM_WIDTH);
+
+			uint16_t base;
+			if(la_flag) {
+				base = 440;
+			} else {
+				base = voice->base_freq;
+			}
+			parse(voice->data, Y, DATASIZE, PACKET_SIZE, base, SPECTRUM_WIDTH);
 			ifft(Y, X, PACKET_SIZE);
 			complex_to_sample(X, data, PACKET_SIZE);
 			fwrite(data, 1, PACKET_SIZE * sizeof(sample_t), snd_out);
