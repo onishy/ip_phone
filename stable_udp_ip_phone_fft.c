@@ -238,7 +238,7 @@ int main(int argc, char *argv[])
 		free(Y);
 
 		Y = calloc(sizeof(complex double), PACKET_SIZE);
-		// n = recvfrom(s, (unsigned char*)voice, sizeof(voice_data_t), 0, (struct sockaddr *)&addr, &addrlen);
+		n = recvfrom(s, (unsigned char*)voice, sizeof(voice_data_t), 0, (struct sockaddr *)&addr, &addrlen);
 		printf("received %d bytes\n", n);
 		fwrite(voice, 1, sizeof(voice_data_t), recv_fp);
 
