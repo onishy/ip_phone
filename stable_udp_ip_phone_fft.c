@@ -11,9 +11,9 @@
 
 #define PACKET_SIZE 1024
 #define SPECTRUM_WIDTH 2
-#define SPECTRUM_N 15
+#define SPECTRUM_N 8
 #define THRESHOLD_A 50
-#define MINIMUM_F 100
+#define MINIMUM_F 50
 #define MAXIMUM_F 500
 
 #define DATASIZE SPECTRUM_WIDTH * SPECTRUM_N*2 * 2
