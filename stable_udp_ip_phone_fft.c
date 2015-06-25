@@ -9,16 +9,18 @@
 #include <unistd.h>
 #include "fft.h"
 
-#define PACKET_SIZE 2048
-#define SPECTRUM_WIDTH 10
-#define SPECTRUM_N 5
+#define PACKET_SIZE 1024
+#define SPECTRUM_WIDTH 2
+#define SPECTRUM_N 15
 #define THRESHOLD_A 50
 #define MINIMUM_F 100
 #define MAXIMUM_F 500
 
+#define DATASIZE SPECTRUM_WIDTH * SPECTRUM_N*2 * 2
+
 typedef struct {
 	uint16_t base_freq;
-	complex double data[SPECTRUM_WIDTH * SPECTRUM_N*2*2];
+	complex double data[DATASIZE];
 } voice_data_t;
 
 // int to_freq(int index, int sample_n, int sampling_freq)
@@ -53,45 +55,65 @@ int find_base_freq(complex double *data, int n, int min_f, int max_f, double thr
     // return current_max_f;
 }
 
-void cut(complex double *y, complex double *compressed, int compressed_len, long n, long pitch, long band) {
+void cut(complex double *y, complex double *compressed, int compressed_len, long n, long pitch, long width) {
 	long i;
-	long j = 0;
+	long band_id = 1;
 	long cnt = 0;
 	
 //	printf("cut begin\n");
-	while(j*pitch*n/44100 < n/2){
-//		printf("j=%ld, pitch=%ld, n=%ld, j*pitch*n/44100 = %ld\n",j, pitch, n, j*pitch*n/44100);
-		for(i=0+(long)(pitch*j)*n/44100; i<(long)(pitch*(1+j))*n/44100; i++){
-	    	if(i <= (long)(pitch*j+band)*n/44100 || i >= (long)(pitch*(1+j)-band)*n/44100){
-	    		compressed[cnt++] = y[i];
-				if(cnt >= compressed_len) return;
+	printf("n=%ld\n", n);
+	for(band_id = 1; band_id <= SPECTRUM_N; band_id++) {
+		for(i = 0; i < width*2; i++) {
+			compressed[cnt++] = y[(band_id*pitch - width + i)*n/44100];
+			compressed[cnt++] = y[n - 1 - (band_id*pitch - width + i)*n/44100];
 
-	    		compressed[cnt++] = y[n-i];
-		      	// y[i]=0;
-		      	// y[n-i]=0;
-//		      	printf("i=%ld\n", i);
-				if(cnt >= compressed_len) return;
-				if(i >= PACKET_SIZE) break;
-		    }
-	    }
-//      	printf("j=%ld\n", j);
-		j++;
-  	}
+			if(cnt >= compressed_len) {
+				printf("cut: cnt over band=%ld, i=%ld\n", band_id, i);
+				return;
+			}
+			if((band_id * pitch - width + i)*n/44100 >= n/2) return;
+		}
+
+	}
+
+
+// 		for(i=0+(long)(pitch*j)*n/44100; i<(long)(pitch*(1+j))*n/44100; i++){
+// 	    	if(i <= (long)(pitch*j)*n/44100+band || i >= (long)(pitch*(1+j))*n/44100-band){
+// 	    		compressed[cnt++] = y[i];
+// 				if(cnt >= compressed_len) return;
+
+// 	    		compressed[cnt++] = y[n-i-1];
+// 		      	// y[i]=0;
+// 		      	// y[n-i]=0;
+// //		      	printf("i=%ld\n", i);
+// 				if(cnt >= compressed_len) {
+// 					printf("cut: cnt over band=%ld, i=%ld\n", j, i);
+// 					return;
+// 				}
+// 				if(i >= PACKET_SIZE) break;
+// 		    }
+// 	    }
+// //      	printf("j=%ld\n", j);
+// 		j++;
+//   	}
 //	printf("cut end\n");
 }
 
-void parse(complex double *compressed, complex double *recovered, int compressed_len, long n, long pitch, long width) {
+void parse(complex double *compressed, complex double *recovered, int compressed_len, long n, uint16_t pitch, long width) {
 	long i;
 	long band_id = 0;
 	long cnt = 0;
 
-	for(band_id = 1; band_id <= SPECTRUM_N; band_id++) {
-		for(i = 0; i < width; i++) {
-			recovered[band_id * width - width + i] = compressed[cnt++];
-			recovered[n - (band_id * width - width + i)] = compressed[cnt++];
+	for(band_id = 1; ; band_id++) {
+		for(i = 0; i < width*2; i++) {
+			recovered[(band_id * pitch - width+i)*n/44100] = compressed[cnt++];
+			recovered[n - 1 -((band_id * pitch - width + i)*n/44100)] = compressed[cnt++];
 
-			if(cnt >= compressed_len) return;
-			if(band_id * width - width + i >= PACKET_SIZE) return;
+			if(cnt >= compressed_len) {
+				printf("parse: cnt over band=%ld, i=%ld\n", band_id, i);
+				return;
+			}
+			if((band_id * pitch - width + i)*n/44100 >= n/2) return;
 		}
 	}
 	return;
@@ -201,14 +223,14 @@ int main(int argc, char *argv[])
 
 	    if(base <= 0) continue;
 	    voice->base_freq = base;
-	    cut(Y, voice->data, SPECTRUM_WIDTH * SPECTRUM_N * 2 * 2, PACKET_SIZE, base, SPECTRUM_WIDTH);
+	    cut(Y, voice->data, DATASIZE, PACKET_SIZE, base, SPECTRUM_WIDTH);
 
 		printf("writing %ld bytes\n", sizeof(voice_data_t));
 		if(n > 0) {
 			sendto(s, (unsigned char*)voice, sizeof(voice_data_t), 0, (struct sockaddr *)&addr, addrlen);
 			fwrite((unsigned char*)voice, 1, sizeof(voice_data_t), send_fp);
 		}
-		else break;
+		// else break;
 		free(Y);
 
 		Y = calloc(sizeof(complex double), PACKET_SIZE);
@@ -217,7 +239,8 @@ int main(int argc, char *argv[])
 		fwrite(voice, 1, sizeof(voice_data_t), recv_fp);
 
 		if(n > 0) {
-			parse(voice->data, Y, SPECTRUM_WIDTH * SPECTRUM_N * 2 * 2, PACKET_SIZE, voice->base_freq, SPECTRUM_WIDTH);
+			printf("received base = %d\n", voice->base_freq);
+			parse(voice->data, Y, DATASIZE, PACKET_SIZE, voice->base_freq, SPECTRUM_WIDTH);
 			ifft(Y, X, PACKET_SIZE);
 			complex_to_sample(X, data, PACKET_SIZE);
 			fwrite(data, 1, PACKET_SIZE * sizeof(sample_t), snd_out);
