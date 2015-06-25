@@ -9,10 +9,10 @@
 #include <unistd.h>
 #include "fft.h"
 
-#define PACKET_SIZE 512
-#define SPECTRUM_WIDTH 1
-#define SPECTRUM_N 4
-#define THRESHOLD_A 20
+#define PACKET_SIZE 2048
+#define SPECTRUM_WIDTH 10
+#define SPECTRUM_N 5
+#define THRESHOLD_A 50
 #define MINIMUM_F 100
 #define MAXIMUM_F 500
 
@@ -184,7 +184,8 @@ int main(int argc, char *argv[])
 	FILE* send_fp = fopen("send_log.txt", "w");
 	FILE* recv_fp = fopen("receive_log.txt", "w");
 	while(1) {
-		voice = malloc(sizeof(voice_data_t));
+		Y = calloc(sizeof(complex double), PACKET_SIZE);
+		voice = calloc(sizeof(voice_data_t), 1);
 
 		n = fread(data, 1, PACKET_SIZE * sizeof(sample_t), snd_in);
 		printf("read_n %d\n", n);
@@ -207,8 +208,10 @@ int main(int argc, char *argv[])
 			sendto(s, (unsigned char*)voice, sizeof(voice_data_t), 0, (struct sockaddr *)&addr, addrlen);
 			fwrite((unsigned char*)voice, 1, sizeof(voice_data_t), send_fp);
 		}
-		//else break;
+		else break;
+		free(Y);
 
+		Y = calloc(sizeof(complex double), PACKET_SIZE);
 		n = recvfrom(s, (unsigned char*)voice, sizeof(voice_data_t), 0, (struct sockaddr *)&addr, &addrlen);
 		printf("received %d bytes\n", n);
 		fwrite(voice, 1, sizeof(voice_data_t), recv_fp);
@@ -220,7 +223,7 @@ int main(int argc, char *argv[])
 			fwrite(data, 1, PACKET_SIZE * sizeof(sample_t), snd_out);
 		}
 		//else break;
-
+		free(Y);
 		free(voice);
 	}
 	printf("done.\n");
