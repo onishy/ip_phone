@@ -10,7 +10,7 @@
 #include "fft.h"
 
 #define PACKET_SIZE 2048
-#define SPECTRUM_WIDTH 2
+#define SPECTRUM_WIDTH 10
 #define SPECTRUM_N 10
 #define THRESHOLD_A 50
 #define MINIMUM_F 100
@@ -238,7 +238,7 @@ int main(int argc, char *argv[])
 		free(Y);
 
 		Y = calloc(sizeof(complex double), PACKET_SIZE);
-		n = recvfrom(s, (unsigned char*)voice, sizeof(voice_data_t), 0, (struct sockaddr *)&addr, &addrlen);
+//		n = recvfrom(s, (unsigned char*)voice, sizeof(voice_data_t), 0, (struct sockaddr *)&addr, &addrlen);
 		printf("received %d bytes\n", n);
 		fwrite(voice, 1, sizeof(voice_data_t), recv_fp);
 
@@ -247,7 +247,7 @@ int main(int argc, char *argv[])
 
 			uint16_t voice_base;
 			if(la_flag) {
-				voice_base = 220;
+				voice_base = 110;
 			} else {
 				voice_base = voice->base_freq;
 			}
