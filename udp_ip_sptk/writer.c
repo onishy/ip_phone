@@ -23,14 +23,17 @@ int main(int argc, char* argv[])
 
 	float n;
 	n = 44100 / 659.25;
+//	n = 44100 / 1318.51;
 	for(i = 0; i < 100; i++) {
 		write(fd, &n, sizeof(float));
 	}
 	n = 44100 / 739.98;
+	// n = 44100 / 1479.97;
 	for(i = 0; i < 100; i++) {
 		write(fd, &n, sizeof(float));
 	}
 	n = 44100 / 830.60;
+	// n = 44100 / 1661.21;
 	for(i = 0; i < 300; i++) {
 		write(fd, &n, sizeof(float));
 	}
