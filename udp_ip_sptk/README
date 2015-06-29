@@ -1,0 +1,9 @@
+10班A
+西澤 勇輝
+藤田 敏郎
+
+easy_vc.pyはhttps://gist.github.com/sylvan5/ff363a3163ffd239dc22より拝借。
+一部編集済み（ピッチファイルを自前のもので読み込むようにした）
+http://aidiary.hatenablog.com/entry/20150225/1424863972を参考にした。
+
+easy_vc.pyの起動にはSPTKをインストールしておく必要がある。
